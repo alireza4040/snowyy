@@ -1,16 +1,14 @@
-name: Build
+name: Explore
 on: [push, workflow_dispatch]
 jobs:
-  build:
+  explore:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x86
-      - name: Build
-        run: cl /nologo /LD /EHsc test.cpp /Fe:SnowWeather.asi
-      - uses: actions/upload-artifact@v4
-        with:
-          name: SnowWeather
-          path: SnowWeather.asi
+      - name: Clone SDK
+        run: git clone --depth 1 https://github.com/DK22Pac/plugin-sdk.git
+      - name: List folders
+        run: |
+          dir plugin-sdk\tools
+          dir plugin-sdk\tools\premake
+      - name: Show SDK own build file
+        run: Get-Content plugin-sdk\.github\workflows\*.yml
