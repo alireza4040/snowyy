@@ -1,9 +1,10 @@
-name: BuildSDK
+name: BuildSnow
 on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: windows-2025-vs2026
     steps:
+      - uses: actions/checkout@v4
       - name: Clone SDK
         run: git clone --depth 1 https://github.com/DK22Pac/plugin-sdk.git
       - name: Setup msbuild
@@ -20,14 +21,16 @@ jobs:
         run: |
           set PLUGIN_SDK_DIR=%GITHUB_WORKSPACE%\plugin-sdk
           msbuild plugin.slnx /property:Configuration=zDebug /property:Platform="Mixed Platforms" /target:plugin_sa /m /verbosity:minimal
-      - name: Build example
+      - name: Use snow code
+        shell: cmd
+        run: copy /Y "%GITHUB_WORKSPACE%\SnowMain.cpp" "%GITHUB_WORKSPACE%\plugin-sdk\examples\Test\Main.cpp"
+      - name: Build snow plugin
         shell: cmd
         working-directory: plugin-sdk
         run: |
           set PLUGIN_SDK_DIR=%GITHUB_WORKSPACE%\plugin-sdk
           msbuild examples\Test\Test.slnx /property:Configuration=Debug /property:Platform=GTA-SA /m /verbosity:minimal
-      - name: Show example files
-        shell: pwsh
-        run: |
-          Get-ChildItem plugin-sdk\examples\Test | Select-Object -ExpandProperty Name
-          Get-ChildItem plugin-sdk -Recurse -Include *.asi -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SnowWeather
+          path: plugin-sdk/examples/Test/bin/GTA-SA/Debug/Test.SA.asi
