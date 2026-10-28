@@ -7,4 +7,5 @@ jobs:
       - name: Clone SDK
         run: git clone --depth 1 https://github.com/DK22Pac/plugin-sdk.git
       - name: Show build lines
-        run: Select-String -Path plugin-sdk\.github\workflows\*.yml -Pattern "premake|msbuild|PLUGIN_SDK_DIR|runs-on" | ForEach-Object { $_.Filename + ": " + $_.Line.Trim() }
+        run: |
+          Select-String -Path plugin-sdk\.github\workflows\*.yml -Pattern "premake|msbuild|PLUGIN_SDK_DIR|runs-on" | ForEach-Object { $_.Filename + " | " + $_.Line.Trim() }
