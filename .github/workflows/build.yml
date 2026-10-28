@@ -1,11 +1,33 @@
-name: Explore
+name: BuildSDK
 on: [push, workflow_dispatch]
 jobs:
-  explore:
-    runs-on: windows-latest
+  build:
+    runs-on: windows-2025-vs2026
     steps:
       - name: Clone SDK
         run: git clone --depth 1 https://github.com/DK22Pac/plugin-sdk.git
-      - name: Show premake step
+      - name: Setup msbuild
+        uses: microsoft/setup-msbuild@v3
+      - name: Generate projects
+        shell: cmd
+        working-directory: plugin-sdk
         run: |
-          Select-String -Path plugin-sdk\.github\workflows\Build_Plugin_GTA_SA.yml -Pattern "Premake Visual Studio project" -Context 0,8 | Out-String
+          set PLUGIN_SDK_DIR=%GITHUB_WORKSPACE%\plugin-sdk
+          "tools\generate\Visual Studio.bat"
+      - name: Build SDK library
+        shell: cmd
+        working-directory: plugin-sdk
+        run: |
+          set PLUGIN_SDK_DIR=%GITHUB_WORKSPACE%\plugin-sdk
+          msbuild plugin.slnx /property:Configuration=zDebug /property:Platform="Mixed Platforms" /target:plugin_sa /m /verbosity:minimal
+      - name: Build example
+        shell: cmd
+        working-directory: plugin-sdk
+        run: |
+          set PLUGIN_SDK_DIR=%GITHUB_WORKSPACE%\plugin-sdk
+          msbuild examples\Test\Test.slnx /property:Configuration=Debug /property:Platform=GTA-SA /m /verbosity:minimal
+      - name: Show example files
+        shell: pwsh
+        run: |
+          Get-ChildItem plugin-sdk\examples\Test | Select-Object -ExpandProperty Name
+          Get-ChildItem plugin-sdk -Recurse -Include *.asi -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
