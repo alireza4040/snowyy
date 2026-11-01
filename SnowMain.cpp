@@ -31,7 +31,31 @@ static bool roofHit = false;
 
 static float Rnd() { return rand() / (float)RAND_MAX; }
 static float Clamp01(float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); }
+static float phaseEnd = 0.0f;
+static float phaseTarget = 1.0f;
+static int lastPhase = 1;
 
+static void NextPhase() {
+    int p;
+    float r = Rnd();
+    if (r < 0.30f) p = 0;
+    else if (r < 0.75f) p = 1;
+    else p = 2;
+    if (p == lastPhase) p = 1;
+    if (p == lastPhase) p = 0;
+    lastPhase = p;
+
+    if (p == 0) {
+        phaseTarget = 0.5f;
+        phaseEnd = timeSec + 40.0f + Rnd() * 60.0f;
+    } else if (p == 1) {
+        phaseTarget = 1.0f;
+        phaseEnd = timeSec + 30.0f + Rnd() * 60.0f;
+    } else {
+        phaseTarget = 2.0f;
+        phaseEnd = timeSec + 15.0f + Rnd() * 20.0f;
+    }
+}
 static void Respawn(Flake &f, bool anywhere, float W, float H) {
     float r = Rnd();
     f.size = 1.1f + r * r * 3.4f;
@@ -118,9 +142,8 @@ static void SnowDraw() {
     CVehicle *veh = FindPlayerVehicle(-1, false);
     if (veh) speedVal = veh->m_vecMoveSpeed.Magnitude();
 
-    float cycle = fmodf(timeSec, 180.0f);
-    float target = (cycle < 25.0f) ? 2.0f : 1.0f;
-    intensity += (target - intensity) * dt * 0.4f;
+    if (timeSec >= phaseEnd) NextPhase();
+    intensity += (phaseTarget - intensity) * dt * 0.4f;
 
     float wind = 0.18f * sinf(timeSec / 20.0f) + 0.12f * sinf(timeSec / 7.3f + 1.3f);
     float fallMul = 1.0f + speedVal * 1.5f + (intensity - 1.0f) * 0.5f;
