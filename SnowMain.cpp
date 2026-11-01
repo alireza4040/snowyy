@@ -4,6 +4,7 @@
 #include "CWeather.h"
 #include "CGame.h"
 #include "CTimer.h"
+#include "CClock.h"
 #include "CVehicle.h"
 #include <cmath>
 #include <cstdlib>
@@ -13,7 +14,7 @@ using namespace plugin;
 
 struct Flake { float x, y, speed, size, drift, freq, phase, alpha; };
 
-static const int MAX_FLAKES = 260;
+static const int MAX_FLAKES = 360;
 static Flake flakes[MAX_FLAKES];
 static bool inited = false;
 static bool enabled = false;
@@ -22,18 +23,35 @@ static float intensity = 1.0f;
 static float timeSec = 0.0f;
 
 static float Rnd() { return rand() / (float)RAND_MAX; }
+static float Clamp01(float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); }
 
 static void Respawn(Flake &f, bool anywhere, float W, float H) {
     float r = Rnd();
-    f.size = 0.8f + r * r * 2.8f;
+    f.size = 1.1f + r * r * 3.4f;
     f.x = Rnd() * (W + 200.0f) - 100.0f;
-    f.y = anywhere ? Rnd() * H : -10.0f - Rnd() * 40.0f;
-    f.speed = 140.0f + f.size * 90.0f;
-    f.drift = 8.0f + Rnd() * 22.0f;
+    f.y = anywhere ? Rnd() * H : -20.0f - Rnd() * 60.0f;
+    f.speed = 110.0f + f.size * 65.0f;
+    f.drift = 10.0f + Rnd() * 24.0f;
     f.freq = 0.6f + Rnd() * 1.4f;
     f.phase = Rnd() * 6.28f;
-    float a = 110.0f + f.size * 35.0f;
+    float a = 110.0f + f.size * 28.0f;
     f.alpha = a > 235.0f ? 235.0f : a;
+}
+
+static void DrawDot(float x, float y, float s, float stretch, float a, float bright) {
+    unsigned char R = (unsigned char)(235.0f * bright);
+    unsigned char G = (unsigned char)(242.0f * bright);
+    unsigned char B = (unsigned char)(255.0f * bright);
+    float sy = s * stretch;
+    float g = s * 2.0f;
+    float gy = sy * 2.0f;
+    unsigned char ga = (unsigned char)(a * 0.16f);
+    unsigned char ca = (unsigned char)a;
+
+    CSprite2d::DrawRect(CRect(x - g, y + gy * 0.7f, x + g, y - gy * 0.7f), CRGBA(R, G, B, ga));
+    CSprite2d::DrawRect(CRect(x - g * 0.7f, y + gy, x + g * 0.7f, y - gy), CRGBA(R, G, B, ga));
+    CSprite2d::DrawRect(CRect(x - s, y + sy * 0.7f, x + s, y - sy * 0.7f), CRGBA(R, G, B, ca));
+    CSprite2d::DrawRect(CRect(x - s * 0.7f, y + sy, x + s * 0.7f, y - sy), CRGBA(R, G, B, ca));
 }
 
 static void SnowDraw() {
@@ -71,10 +89,18 @@ static void SnowDraw() {
     float target = (cycle < 25.0f) ? 2.0f : 1.0f;
     intensity += (target - intensity) * dt * 0.4f;
 
-    float wind = 0.25f * sinf(timeSec / 20.0f);
+    float wind = 0.18f * sinf(timeSec / 20.0f) + 0.12f * sinf(timeSec / 7.3f + 1.3f);
     float fallMul = 1.0f + speedVal * 1.5f + (intensity - 1.0f) * 0.5f;
-    int active = (int)(120.0f * intensity);
+    int active = (int)(170.0f * intensity);
     if (active > MAX_FLAKES) active = MAX_FLAKES;
+
+    float stretch = 1.0f + speedVal * 3.0f;
+    if (stretch > 2.8f) stretch = 2.8f;
+
+    int hour = CClock::ms_nGameClockHours;
+    float bright = 1.0f;
+    if (hour >= 21 || hour < 5) bright = 0.55f;
+    else if (hour < 7 || hour >= 19) bright = 0.8f;
 
     float scale = H / 1080.0f;
 
@@ -83,12 +109,15 @@ static void SnowDraw() {
         f.y += f.speed * fallMul * scale * dt;
         f.x += (wind * f.speed * scale + sinf(f.phase + timeSec * f.freq) * f.drift * scale) * dt;
 
-        if (f.y > H + 10.0f || f.x < -150.0f || f.x > W + 150.0f)
+        if (f.y > H + 20.0f || f.x < -150.0f || f.x > W + 150.0f)
             Respawn(f, false, W, H);
 
-        float s = f.size * scale;
-        CSprite2d::DrawRect(CRect(f.x - s, f.y + s, f.x + s, f.y - s),
-                            CRGBA(235, 240, 255, (unsigned char)f.alpha));
+        float fadeIn = Clamp01(f.y / (H * 0.08f));
+        float fadeOut = Clamp01((H - f.y) / (H * 0.10f));
+        float a = f.alpha * fadeIn * fadeOut;
+        if (a < 2.0f) continue;
+
+        DrawDot(f.x, f.y, f.size * scale, stretch, a, bright);
     }
 }
 
