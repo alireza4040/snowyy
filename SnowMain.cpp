@@ -6,6 +6,10 @@
 #include "CTimer.h"
 #include "CClock.h"
 #include "CVehicle.h"
+#include "CPlayerPed.h"
+#include "CWorld.h"
+#include "CColPoint.h"
+#include "CEntity.h"
 #include <cmath>
 #include <cstdlib>
 #include <windows.h>
@@ -21,6 +25,9 @@ static bool enabled = false;
 static bool keyWasDown = false;
 static float intensity = 1.0f;
 static float timeSec = 0.0f;
+static float shelter = 0.0f;
+static int roofTimer = 0;
+static bool roofHit = false;
 
 static float Rnd() { return rand() / (float)RAND_MAX; }
 static float Clamp01(float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); }
@@ -54,6 +61,17 @@ static void DrawDot(float x, float y, float s, float stretch, float a, float bri
     CSprite2d::DrawRect(CRect(x - s * 0.7f, y + sy, x + s * 0.7f, y - sy), CRGBA(R, G, B, ca));
 }
 
+static bool HasRoofAbove() {
+    CPlayerPed *p = FindPlayerPed(-1);
+    if (!p) return false;
+    CVector from = p->GetPosition();
+    CVector to = from;
+    to.z += 25.0f;
+    CColPoint col;
+    CEntity *hit = nullptr;
+    return CWorld::ProcessLineOfSight(from, to, col, hit, true, false, false, true, true, false, false, false);
+}
+
 static void SnowDraw() {
     float W = SCREEN_WIDTH;
     float H = SCREEN_HEIGHT;
@@ -80,6 +98,16 @@ static void SnowDraw() {
 
     float dt = CTimer::ms_fTimeStep / 50.0f;
     timeSec += dt;
+
+    roofTimer++;
+    if (roofTimer >= 8) {
+        roofTimer = 0;
+        roofHit = HasRoofAbove();
+    }
+    float shelterTarget = roofHit ? 1.0f : 0.0f;
+    shelter += (shelterTarget - shelter) * dt * 0.6f;
+    float open = 1.0f - Clamp01(shelter);
+    if (open < 0.02f) return;
 
     float speedVal = 0.0f;
     CVehicle *veh = FindPlayerVehicle(-1, false);
@@ -114,7 +142,7 @@ static void SnowDraw() {
 
         float fadeIn = Clamp01(f.y / (H * 0.08f));
         float fadeOut = Clamp01((H - f.y) / (H * 0.10f));
-        float a = f.alpha * fadeIn * fadeOut;
+        float a = f.alpha * fadeIn * fadeOut * open;
         if (a < 2.0f) continue;
 
         DrawDot(f.x, f.y, f.size * scale, stretch, a, bright);
