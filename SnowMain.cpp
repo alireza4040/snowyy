@@ -33,27 +33,24 @@ static float Rnd() { return rand() / (float)RAND_MAX; }
 static float Clamp01(float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); }
 static float phaseEnd = 0.0f;
 static float phaseTarget = 1.0f;
-static int lastPhase = 1;
+static int lastPhase = 0;
 
 static void NextPhase() {
-    int p;
-    float r = Rnd();
-    if (r < 0.30f) p = 0;
-    else if (r < 0.75f) p = 1;
-    else p = 2;
-    if (p == lastPhase) p = 1;
-    if (p == lastPhase) p = 0;
+    int p = 1;
+    if (lastPhase == 1) {
+        p = (Rnd() < 0.55f) ? 0 : 2;
+    }
     lastPhase = p;
 
     if (p == 0) {
         phaseTarget = 0.5f;
-        phaseEnd = timeSec + 40.0f + Rnd() * 60.0f;
+        phaseEnd = timeSec + 30.0f + Rnd() * 40.0f;
     } else if (p == 1) {
         phaseTarget = 1.0f;
-        phaseEnd = timeSec + 30.0f + Rnd() * 60.0f;
+        phaseEnd = timeSec + 60.0f + Rnd() * 90.0f;
     } else {
         phaseTarget = 2.0f;
-        phaseEnd = timeSec + 15.0f + Rnd() * 20.0f;
+        phaseEnd = timeSec + 20.0f + Rnd() * 20.0f;
     }
 }
 static void Respawn(Flake &f, bool anywhere, float W, float H) {
