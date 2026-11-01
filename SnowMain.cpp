@@ -100,12 +100,17 @@ static void SnowDraw() {
     timeSec += dt;
 
     roofTimer++;
-    if (roofTimer >= 8) {
+    if (roofTimer >= 3) {
         roofTimer = 0;
         roofHit = HasRoofAbove();
     }
-    float shelterTarget = roofHit ? 1.0f : 0.0f;
-    shelter += (shelterTarget - shelter) * dt * 0.6f;
+    if (roofHit) {
+        shelter += dt * 3.0f;
+        if (shelter > 1.0f) shelter = 1.0f;
+    } else {
+        shelter -= dt * 2.2f;
+        if (shelter < 0.0f) shelter = 0.0f;
+    }
     float open = 1.0f - Clamp01(shelter);
     if (open < 0.02f) return;
 
