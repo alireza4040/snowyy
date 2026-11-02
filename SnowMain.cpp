@@ -28,6 +28,13 @@ static float timeSec = 0.0f;
 static float shelter = 0.0f;
 static int roofTimer = 0;
 static bool roofHit = false;
+static int snowSavedWeather = 1;
+
+static void RestoreWeather() {
+    CWeather::ForcedWeatherType = -1;
+    CWeather::NewWeatherType = snowSavedWeather;
+    CWeather::OldWeatherType = snowSavedWeather;
+}
 
 static float Rnd() { return rand() / (float)RAND_MAX; }
 static float Clamp01(float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); }
@@ -99,12 +106,23 @@ static void SnowDraw() {
 
     bool down = (GetAsyncKeyState(VK_F6) & 0x8000) != 0;
     if (down && !keyWasDown) {
-        enabled = !enabled;
-        if (!enabled) CWeather::ForcedWeatherType = -1;
+        if (enabled) {
+            enabled = false;
+            RestoreWeather();
+        } else if (CWeather::ForcedWeatherType == -1) {
+            int w = CWeather::NewWeatherType;
+            snowSavedWeather = (w >= 0 && w < 21) ? w : 1;
+            enabled = true;
+        }
     }
     keyWasDown = down;
 
     if (!enabled) return;
+
+    if (CWeather::ForcedWeatherType != -1 && CWeather::ForcedWeatherType != 21) {
+        enabled = false;
+        return;
+    }
 
     CWeather::ForcedWeatherType = 21;
     CWeather::NewWeatherType = 21;
